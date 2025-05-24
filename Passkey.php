@@ -21,8 +21,10 @@ class Passkey
 {
     public static function generateCreationOptions($username, $user_id, $displayname)
     {
+        $rp_id = (getenv('RP_ID') !== false) ? getenv('RP_ID') : $_SERVER['SERVER_NAME'];
+
         //ingredients
-        $RP_entity = PublicKeyCredentialRpEntity::create(getenv('APP_NAME'), getenv('RELYING_PARTY_ID'));
+        $RP_entity = PublicKeyCredentialRpEntity::create(getenv('APP_NAME'), $rp_id);
         $user_entity = PublicKeyCredentialUserEntity::create($username, $user_id, $displayname);
         $challenge = random_bytes(32);
         $criteria = AuthenticatorSelectionCriteria::create(
@@ -50,6 +52,8 @@ class Passkey
 
     public static function verifyCreation($credential_data)
     {
+        $rp_id = (getenv('RP_ID') !== false) ? getenv('RP_ID') : $_SERVER['SERVER_NAME'];
+
         //get validator
         $validator = self::getValidator('creation');
 
@@ -70,7 +74,7 @@ class Passkey
             $credential_source = $validator->check(
                 $credential->response,
                 $creation_options,
-                getenv('RELYING_PARTY_ID'),
+                $rp_id
             );
         } catch (Throwable $e) {
             return (object) ['error' => $e->getMessage()];
