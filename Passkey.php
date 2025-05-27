@@ -44,14 +44,10 @@ class Passkey
         //serialize
         $creation_options_string = self::serialize('creation_options', $creation_options);
 
-        //store in session for varification later
-        MiniEngine::setSession('webauthn_user_entity', serialize($user_entity));
-        MiniEngine::setSession('webauthn_creation_options', $creation_options_string);
-
         return json_decode($creation_options_string);
     }
 
-    public static function verifyCreation($credential_data)
+    public static function verifyCreation($credential_data, $creation_options_string)
     {
         //get validator
         $validator = self::getValidator('creation');
@@ -64,8 +60,7 @@ class Passkey
             return (object) ['error' => 'Invalid credential response type'];
         }
 
-        //get credential_options from session
-        $creation_options_string = MiniEngine::getSession('webauthn_creation_options');
+        //get creation_options
         $creation_options = self::deserialize('creation_options', $creation_options_string);
 
         //vaildate
@@ -101,7 +96,6 @@ class Passkey
         );
 
         $authentication_options_string = self::serialize('authentication_options', $authentication_options);
-        MiniEngine::setSession('webauthn_authentication_options', $authentication_options_string);
 
         return json_decode($authentication_options_string);
     }
