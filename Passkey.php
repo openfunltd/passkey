@@ -1,6 +1,7 @@
 <?php
 use Webauthn\PublicKeyCredentialCreationOptions;
 use Webauthn\AuthenticatorAttestationResponse;
+use Webauthn\AuthenticatorAssertionResponse;
 use Webauthn\PublicKeyCredentialRequestOptions;
 use Webauthn\PublicKeyCredentialSource;
 //common
@@ -105,8 +106,40 @@ class Passkey
         return json_decode($authentication_options_string);
     }
 
-    public static function verifyAuthentication()
+    public static function verifyAuthentication($credential_source_string, $credential_data, $authentication_options_string, $user_id)
     {
+        //get validator
+        $validator = self::getValidator('request');
+
+        //get PublicKeyCredential object
+        $credential = self::deserialize('credential', $credential_data);
+
+        //check client is in assertion step
+        if (!$credential->response instanceof AuthenticatorAssertionResponse) {
+            return (object) ['error' => 'Invalid credential response type'];
+        }
+
+        //get ingredients
+        $credential_source = self::deserialize('credential_source', $credential_source_string);
+        $authentication_options = self::deserialize('authentication_options', $authentication_options_string);
+
+        //vaildate
+        try {
+            $updated_credential_source = $validator->check(
+                $credential_source,
+                $credential->response,
+                $authentication_options,
+                self::getRPID(),
+                $user_id
+            );
+        } catch (Throwable $e) {
+            return (object) ['error' => $e->getMessage()];
+        }
+
+        //serialize
+        $updated_credential_source_string = self::serialize('credential_source', $updated_credential_source);
+
+        return json_decode($updated_credential_source_string);
     }
 
     private static function serialize($type, $instance)
@@ -182,6 +215,14 @@ class Passkey
                 'json'
             );
         }
+
+        if ($type == 'authentication_options') {
+            return $serializer->deserialize(
+                $data, //expect $data is json_string
+                PublicKeyCredentialRequestOptions::class,
+                'json'
+            );
+        }
     }
 
     private static function getValidator($type)
@@ -191,6 +232,11 @@ class Passkey
         if ($type == 'creation') {
            $creation_CSM = $csmFactory->creationCeremony();
            return AuthenticatorAttestationResponseValidator::create($creation_CSM);
+        }
+
+        if ($type == 'request') {
+           $request_CSM = $csmFactory->requestCeremony();
+           return AuthenticatorAssertionResponseValidator::create($request_CSM);
         }
     }
 
