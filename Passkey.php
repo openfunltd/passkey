@@ -1,6 +1,8 @@
 <?php
 use Webauthn\PublicKeyCredentialCreationOptions;
 use Webauthn\AuthenticatorAttestationResponse;
+use Webauthn\PublicKeyCredentialRequestOptions;
+use Webauthn\PublicKeyCredentialSource;
 //common
 use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialRpEntity;
@@ -21,10 +23,8 @@ class Passkey
 {
     public static function generateCreationOptions($username, $user_id, $displayname)
     {
-        $rp_id = (getenv('RP_ID') !== false) ? getenv('RP_ID') : $_SERVER['SERVER_NAME'];
-
         //ingredients
-        $RP_entity = PublicKeyCredentialRpEntity::create(getenv('APP_NAME'), $rp_id);
+        $RP_entity = PublicKeyCredentialRpEntity::create(getenv('APP_NAME'), self::getRPID());
         $user_entity = PublicKeyCredentialUserEntity::create($username, $user_id, $displayname);
         $challenge = random_bytes(32);
         $criteria = AuthenticatorSelectionCriteria::create(
@@ -52,8 +52,6 @@ class Passkey
 
     public static function verifyCreation($credential_data)
     {
-        $rp_id = (getenv('RP_ID') !== false) ? getenv('RP_ID') : $_SERVER['SERVER_NAME'];
-
         //get validator
         $validator = self::getValidator('creation');
 
@@ -74,7 +72,7 @@ class Passkey
             $credential_source = $validator->check(
                 $credential->response,
                 $creation_options,
-                $rp_id
+                self::getRPID(),
             );
         } catch (Throwable $e) {
             return (object) ['error' => $e->getMessage()];
@@ -86,8 +84,25 @@ class Passkey
         return json_decode($credential_source_string);
     }
 
-    public static function generateAuthenticationOptions()
+    public static function generateAuthenticationOptions($credential_source_strings = [])
     {
+        $allowed_credentials = [];
+        foreach ($credential_source_strings as $credential_source_string) {
+            $credential_source = self::deserialize('credential_source', $credential_source_string);
+            $allowed_credentials[] = $credential_source->getPublicKeyCredentialDescriptor();
+        }
+
+        $authentication_options = PublicKeyCredentialRequestOptions::create(
+            challenge: random_bytes(32),
+            rpId: self::getRPID(),
+            allowCredentials: $allowed_credentials, //empty array when using discoverable mode
+            userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED
+        );
+
+        $authentication_options_string = self::serialize('authentication_options', $authentication_options);
+        MiniEngine::setSession('webauthn_authentication_options', $authentication_options_string);
+
+        return json_decode($authentication_options_string);
     }
 
     public static function verifyAuthentication()
@@ -124,6 +139,19 @@ class Passkey
 
             return $json_string;
         }
+
+        if ($type == 'authentication_options') {
+            $json_string = $serializer->serialize(
+                $instance,
+                'json',
+                [
+                    AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                    JsonEncode::OPTIONS => JSON_THROW_ON_ERROR,
+                ]
+            );
+
+            return $json_string;
+        }
     }
 
     private static function deserialize($type, $data)
@@ -143,6 +171,14 @@ class Passkey
             return $serializer->deserialize(
                 $data, //expect $data is json_string
                 PublicKeyCredentialCreationOptions::class,
+                'json'
+            );
+        }
+
+        if ($type == 'credential_source') {
+            return $serializer->deserialize(
+                $data, //expect $data is json_string
+                PublicKeyCredentialSource::class,
                 'json'
             );
         }
@@ -169,5 +205,11 @@ class Passkey
         $serializer = $factory->create();
 
         return $serializer;
+    }
+
+    private static function getRPID()
+    {
+        $rp_id = (getenv('RP_ID') !== false) ? getenv('RP_ID') : $_SERVER['SERVER_NAME'];
+        return $rp_id;
     }
 }
