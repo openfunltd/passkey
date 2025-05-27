@@ -141,44 +141,14 @@ class Passkey
         //get serializer
         $serializer = self::getSerializer();
 
-        if ($type == 'creation_options') {
-            $json_string = $serializer->serialize(
-                $instance,
-                'json',
-                [
-                    AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
-                    JsonEncode::OPTIONS => JSON_THROW_ON_ERROR,
-                ]
-            );
-
-            return $json_string;
-        }
-
-        if ($type == 'credential_source') {
-            $json_string = $serializer->serialize(
-                $instance,
-                'json',
-                [
-                    AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
-                    JsonEncode::OPTIONS => JSON_THROW_ON_ERROR,
-                ]
-            );
-
-            return $json_string;
-        }
-
-        if ($type == 'authentication_options') {
-            $json_string = $serializer->serialize(
-                $instance,
-                'json',
-                [
-                    AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
-                    JsonEncode::OPTIONS => JSON_THROW_ON_ERROR,
-                ]
-            );
-
-            return $json_string;
-        }
+        return $serializer->serialize(
+            $instance,
+            'json',
+            [
+                AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+                JsonEncode::OPTIONS => JSON_THROW_ON_ERROR,
+            ]
+        );
     }
 
     private static function deserialize($type, $data)
@@ -186,37 +156,22 @@ class Passkey
         //get serializer
         $serializer = self::getSerializer();
 
+        $type_class_mapping = [
+            'credential' => PublicKeyCredential::class,
+            'creation_options' => PublicKeyCredentialCreationOptions::class,
+            'credential_source' => PublicKeyCredentialSource::class,
+            'authentication_options' => PublicKeyCredentialRequestOptions::class,
+        ];
+
         if ($type == 'credential') {
-            return $serializer->deserialize(
-                json_encode($data), //expect $data is object
-                PublicKeyCredential::class,
-                'json'
-            );
+            $data = json_encode($data);
         }
 
-        if ($type == 'creation_options') {
-            return $serializer->deserialize(
-                $data, //expect $data is json_string
-                PublicKeyCredentialCreationOptions::class,
-                'json'
-            );
-        }
-
-        if ($type == 'credential_source') {
-            return $serializer->deserialize(
-                $data, //expect $data is json_string
-                PublicKeyCredentialSource::class,
-                'json'
-            );
-        }
-
-        if ($type == 'authentication_options') {
-            return $serializer->deserialize(
-                $data, //expect $data is json_string
-                PublicKeyCredentialRequestOptions::class,
-                'json'
-            );
-        }
+        return $serializer->deserialize(
+            $data,
+            $type_class_mapping[$type],
+            'json'
+        );
     }
 
     private static function getValidator($type)
