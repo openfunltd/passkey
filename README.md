@@ -2,9 +2,9 @@
 
 <img src="https://github.com/user-attachments/assets/41a9d902-89e4-4fb3-ba55-845ff79ba144" height="150">
 
-A simplified application-level interface for handling complex WebAuthn functionality, built on top of the webauthn_framework library.
+A simplified application-level interface for handling complex WebAuthn functionality, built on top of the [webauthn_framework library](https://github.com/web-auth/webauthn-framework).
 
-Ready for being used in mini-engine
+Ready for being used in [mini-engine](https://github.com/openfunltd/mini-engine)
 
 ## Install
 
