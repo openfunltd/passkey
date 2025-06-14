@@ -9,6 +9,10 @@ function registerWebAuthn(event) {
     $.post(registerWebAuthnUrl,
       JSON.stringify(data),  
       function(publicKeyOptions) {
+        if ('error' in publicKeyOptions) {
+          alert(publicKeyOptions.error);
+          return;
+        }
         createWebAuthnCredential(publicKeyOptions);
       },
       'json'
