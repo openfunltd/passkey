@@ -32,6 +32,7 @@ class Passkey
             userVerification: AuthenticatorSelectionCriteria::USER_VERIFICATION_REQUIREMENT_REQUIRED,
             residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_REQUIRED,
         );
+        $preference = PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_DIRECT;
 
         //generate creation options
         $creation_options = PublicKeyCredentialCreationOptions::create(
@@ -39,6 +40,7 @@ class Passkey
             user: $user_entity,
             challenge: $challenge,
             authenticatorSelection: $criteria,
+            attestation: $preference,
         );
 
         //serialize
